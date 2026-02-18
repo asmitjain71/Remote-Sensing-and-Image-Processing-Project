@@ -1,0 +1,4 @@
+# Place your city data here:
+# - my_city.tif (satellite image)
+# - my_city_dsm.tif (optional, height data)
+# - viirs_nightlight.tif (night light data)
