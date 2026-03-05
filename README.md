@@ -29,6 +29,12 @@ You need two types of data for the same area:
 
 **Goal**: Input an RGB Image → Output a Shapefile of Building Footprints.
 
+### Optional (for class): YOLO-based footprint extraction
+
+If you need a **presentation-ready explanation of YOLO** (including YOLOv8 **instance segmentation**, training, and GIS export), see:
+
+- `README_YOLO_BUILDING_DETECTION.md`
+
 ### Step 1: The Model (Python Code)
 
 We will use a library called `segmentation_models_pytorch` which has pre-trained models. This saves you from training from scratch.
