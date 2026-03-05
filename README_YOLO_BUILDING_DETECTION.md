@@ -180,6 +180,99 @@ Common metrics you can mention in class:
 - **AP50** (Average Precision at IoU=0.50)
 - **mAP50-95** (COCO-style average across IoU thresholds)
 
+### F) Step-by-step training pipeline (detailed example)
+
+This section walks through the **full training pipeline** for building footprint extraction using YOLOv8 instance segmentation.
+
+#### 1. Data preparation (the most important step)
+
+Remote sensing datasets often come with annotations in **GeoJSON** or **COCO** format. For YOLO segmentation, you must convert them into the **YOLO Segmentation Format**.
+
+For segmentation, YOLO requires a corresponding `.txt` file for every image.  
+Each line in the text file represents **one building** and contains:
+
+```text
+<class-index> <x1> <y1> <x2> <y2> ... <xn> <yn>
+```
+
+- **class-index**: `0` for building (if you only have one class).
+- **x, y**: polygon vertex coordinates **normalized** to \([0,1]\) (divide by image width/height).
+
+**Directory structure (must match this pattern):**
+
+```text
+building_dataset/
+├── images/
+│   ├── train/   # .jpg or .png tiles for training
+│   └── val/     # tiles for validation
+└── labels/
+    ├── train/   # YOLO .txt labels for train images
+    └── val/     # YOLO .txt labels for val images
+```
+
+Tools like **Roboflow** are very useful: upload your labeled remote sensing dataset and export directly in **YOLOv8 segmentation format** with this structure.
+
+#### 2. Configuration file (`data.yaml`)
+
+YOLO needs a simple YAML file that tells it **where the images/labels are** and **what classes** you have.
+
+```yaml
+# data.yaml
+path: /absolute/path/to/your/building_dataset  # Root directory of dataset
+train: images/train                            # Relative path to training images
+val: images/val                                # Relative path to validation images
+
+names:
+  0: building
+```
+
+#### 3. Training script (Python)
+
+With the data and YAML ready, training is just a few lines using Ultralytics:
+
+```python
+from ultralytics import YOLO
+
+def train_building_model():
+    # 1. Load a pre-trained YOLO instance segmentation model
+    # 'yolov8n-seg.pt' = nano (fastest)
+    # 'yolov8m-seg.pt' or 'yolov8x-seg.pt' = larger, usually more accurate
+    model = YOLO("yolov8n-seg.pt")
+
+    # 2. Train the model
+    results = model.train(
+        data="data.yaml",                 # Path to your dataset configuration
+        epochs=100,                       # Number of epochs (tune for your dataset)
+        imgsz=640,                        # Input size (remote sensing often benefits from 1024)
+        batch=16,                         # Batch size (reduce if GPU OOM)
+        project="Building_Extraction",    # Folder for saving results
+        name="yolov8_run1",               # Run name
+        device=0                          # GPU 0; use 'cpu' if no GPU
+    )
+
+    print("Training complete!")
+
+if __name__ == "__main__":
+    train_building_model()
+```
+
+#### 4. Evaluating the results
+
+During training, YOLO will log metrics for **boxes** and **masks**:
+
+- **Box mAP**: how well it draws bounding boxes around buildings.
+- **Mask mAP**: how well it traces the true **outline/footprint** of each building.
+
+For building footprint extraction, **mask mAP is the critical metric** to mention in class.
+
+After training finishes, the best weights are saved automatically as:
+
+```text
+Building_Extraction/yolov8_run1/weights/best.pt
+```
+
+You can then plug `best.pt` into the **inference / GIS export** scripts earlier in this README to test on new satellite images and create GeoJSON/Shapefiles of building footprints.
+
 ---
 
 ## 8) Export footprints to GIS (GeoJSON/Shapefile)
